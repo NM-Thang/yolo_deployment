@@ -1,0 +1,34 @@
+
+name: "tensorrt_model"
+platform: "tensorrt_plan"
+max_batch_size: 16
+
+dynamic_batching {
+    max_queue_delay_microseconds: 500
+}
+
+# The names must strictly match the layer names defined during TensorRT export
+input [
+  {
+    name: "images"
+    data_type: TYPE_FP32
+    dims: [ 3, 224, 224 ]
+  }
+]
+
+output [
+  {
+    name: "predictions"
+    data_type: TYPE_FP32
+    dims: [ 1000 ]
+  }
+]
+
+# TensorRT only supports GPU execution
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU
+    gpus: [ 0 ]
+  }
+]

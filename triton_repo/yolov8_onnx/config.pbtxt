@@ -1,0 +1,41 @@
+name: "onnx_model"
+platform: "onnxruntime_onnx"
+max_batch_size: 16
+
+# Enable dynamic batching to group incoming requests
+dynamic_batching {
+    max_queue_delay_microseconds: 500
+}
+
+# Replace 'INPUT__0' and dims with the exact output from the inspect script
+input [
+  {
+    name: "INPUT__0"
+    data_type: TYPE_FP32
+    dims: [ 3, 224, 224 ]
+  }
+]
+
+# Replace 'OUTPUT__0' and dims accordingly
+output [
+  {
+    name: "OUTPUT__0"
+    data_type: TYPE_FP32
+    dims: [ 1000 ]
+  }
+]
+
+# Deployment modes: Run 1 instance on GPU and 1 instance on CPU concurrently
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU
+    gpus: [ 0 ]
+  },
+  {
+    count: 1
+    kind: KIND_CPU
+  }
+]
+
+cp my_model.engine model_repository/my_tensorrt_model/1/model.plan
