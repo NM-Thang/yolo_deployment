@@ -1,8 +1,1 @@
-ultralytics
-opencv-python
-numpy
-pillow
-onnx
-onnxruntime-gpu
-tensorrt
-tritonclient[all]
+python -c "import torch; print(torch.cuda.is_available())"
