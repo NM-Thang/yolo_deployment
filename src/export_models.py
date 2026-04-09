@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 from ultralytics import YOLO
 
-def export_models(export_onnx: bool, export_engine: bool):
+def export_models(export_onnx: bool, export_engine: bool, use_half: bool):
     # Force initialize CUDA and verify status
     print(f"--- GPU DIAGNOSTICS ---")
     cuda_available = torch.cuda.is_available()
@@ -60,7 +60,7 @@ def export_models(export_onnx: bool, export_engine: bool):
             model.export(
                 format="engine",
                 dynamic=True,
-                half=True,     # Convert FP32 to FP16 for speed optimization
+                half=use_half,  # Convert FP32 to FP16 for speed optimization
                 workspace=4,   # Max workspace size in GB
                 device=device  # Explicitly assign GPU device
             )
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--onnx", action="store_true", help="Export to ONNX format")
     parser.add_argument("--engine", action="store_true", help="Export to TensorRT format")
     parser.add_argument("--all", action="store_true", help="Export to BOTH formats")
-    
+    parser.add_argument("--half", action="store_true", help="Export TensorRT in FP16 precision (default is FP32)")
     args = parser.parse_args()
     
     # Determine which formats to export based on user flags
@@ -92,4 +92,4 @@ if __name__ == "__main__":
         do_engine = True
 
     # Call the main function with the parsed flags
-    export_models(export_onnx=do_onnx, export_engine=do_engine)
+    export_models(export_onnx=do_onnx, export_engine=do_engine, use_half=args.half)
