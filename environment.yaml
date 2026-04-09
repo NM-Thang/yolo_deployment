@@ -1,0 +1,17 @@
+name: yolo_deploy_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:    
+    - ultralytics
+    - opencv-python
+    - numpy
+    - pillow
+    - onnx
+    - onnxruntime-gpu
+    - tensorrt
+    - tritonclient[all] 
+    
