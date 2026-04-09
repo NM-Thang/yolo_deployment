@@ -1,0 +1,8 @@
+ultralytics
+opencv-python
+numpy
+pillow
+onnx
+onnxruntime-gpu
+tensorrt
+tritonclient[all]
