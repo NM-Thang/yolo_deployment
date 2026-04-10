@@ -1,4 +1,4 @@
-name: "onnx_model"
+name: "yolov8_onnx"
 platform: "onnxruntime_onnx"
 max_batch_size: 4
 

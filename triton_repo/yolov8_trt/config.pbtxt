@@ -1,5 +1,4 @@
-
-name: "tensorrt_model"
+name: "yolov8_trt"
 platform: "tensorrt_plan"
 max_batch_size: 4
 
