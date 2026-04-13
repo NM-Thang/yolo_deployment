@@ -48,7 +48,7 @@ def export_models(export_onnx: bool, export_engine: bool, use_half: bool):
             format="onnx",
             dynamic=True,  # Enable dynamic shape/batch
             simplify=True, # Optimize the ONNX graph
-            opset=12,
+            opset=17,
             device=device
         )
     else:
