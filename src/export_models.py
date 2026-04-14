@@ -27,7 +27,6 @@ def export_models(export_onnx: bool, export_torch: bool, export_engine: bool, us
     else:
         print("No GPU selected. Using CPU by default.")
         device = "cpu"
-    print(f"Current CUDA_VISIBLE_DEVICES: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
     print(f"-----------------------\n")
 
     project_root = Path(__file__).resolve().parent.parent
@@ -44,21 +43,24 @@ def export_models(export_onnx: bool, export_torch: bool, export_engine: bool, us
             format="onnx",
             dynamic=True,  
             simplify=True, 
-            opset=17,
+            opset=18,
             device=device
         )
     elif export_torch:
         print("\n[1/2] Exporting to ONNX (Dynamic)... with torch export method")
+        # batch = torch.export.Dim("batch", min=1, max=1024)
+
         torch.onnx.export(
-            model.model,  
+            model.model.to(device),  
             torch.randn(1, 3, 640, 640).to(device), 
             str(model_dir / "yolov8n_torch.onnx"),  
             export_params=True,
-            opset_version=17,
+            opset_version=18,        
             do_constant_folding=True,
-            input_names=['input'],
-            output_names=['output'],
-            dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
+            input_names=['input'],    
+            output_names=['output'],  
+            dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}},
+            # dynamic_shapes={'x': {0: batch}}
 
             # dynamic_axes = {
             #     'input': {
@@ -68,7 +70,9 @@ def export_models(export_onnx: bool, export_torch: bool, export_engine: bool, us
             #     },
             #     'output': {
             #         0: 'batch_size'
-            #         # note: output dynamic axes can be more complex due to YOLO's variable output shape, so we only set batch_size here. Height and width are typically fixed for ONNX export. Adjust as needed based on your model's output structure.
+            #         # note: output dynamic axes can be more complex due to YOLO's variable output shape, 
+            #         # so we only set batch_size here. Height and width are typically fixed for ONNX export. 
+            #         # Adjust as needed based on your model's output structure.
             #     }
             # }
         )
