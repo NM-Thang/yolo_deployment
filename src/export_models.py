@@ -59,22 +59,22 @@ def export_models(export_onnx: bool, export_torch: bool, export_engine: bool, us
             do_constant_folding=True,
             input_names=['input'],    
             output_names=['output'],  
-            dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}},
+            # dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}},
             # dynamic_shapes={'x': {0: batch}}
 
-            # dynamic_axes = {
-            #     'input': {
-            #         0: 'batch_size', 
-            #         2: 'height',      
-            #         3: 'width'        
-            #     },
-            #     'output': {
-            #         0: 'batch_size'
-            #         # note: output dynamic axes can be more complex due to YOLO's variable output shape, 
-            #         # so we only set batch_size here. Height and width are typically fixed for ONNX export. 
-            #         # Adjust as needed based on your model's output structure.
-            #     }
-            # }
+            dynamic_axes = {
+                'input': {
+                    0: 'batch_size', 
+                    2: 'height',      
+                    3: 'width'        
+                },
+                'output': {
+                    0: 'batch_size'
+                    # note: output dynamic axes can be more complex due to YOLO's variable output shape, 
+                    # so we only set batch_size here. Height and width are typically fixed for ONNX export. 
+                    # Adjust as needed based on your model's output structure.
+                }
+            }
         )
     else :
         print("\n[1/2] Skipping ONNX export (--onnx flag not provided).")
