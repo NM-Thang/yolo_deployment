@@ -1,0 +1,10 @@
+model_repository/yolov8_onnx
+1 -> dynamic (batch + shape), export from untralytic (onnx_1)
+2 -> dymamic (batch + shape), export from torch.onnx (onnx_2)
+
+model_repository/yolov8_trt
+1 -> onnx1, f32
+2 -> onnx1, f16
+3 -> onnx2, f32
+4 -> onnx2, f16
+
