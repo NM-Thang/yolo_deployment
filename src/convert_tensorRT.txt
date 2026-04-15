@@ -1,13 +1,47 @@
 c1: trtexed tool
+----------------------------------------------------------------------------------
+1 -> mount folder lam viec vao container
+docker run --gpus '"device=x"' -it --rm -v $PWD:/workspace 20d3e6634cd3 /bin/bash
+
+(can nhac neu file tao ra trong container can sua)
+docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/workspace 20d3e6634cd3 /bin/bash
+
+2 -> sd trtexed de convert
 /usr/src/tensorrt/bin/trtexec \
 --onnx=yolov8n.onnx \
---saveEngine=./tensorrt/1/model.plan \
---minShapes=images:1x3x320x320 \
---optShapes=images:8x3x640x640 \
---maxShapes=images:32x3x640x640 \
+--saveEngine=./tensorrt/1/model.plan \     
+--minShapes=<input_name>:1x3x320x320 \
+--optShapes=<input_name>:8x3x640x640 \
+--maxShapes=<input_name>:32x3x640x640 \
 --workspace=4096 \
---iterations=12 \
---exportProfile=./tensorrt/1/file.json
+--iterations=100 \
+--exportProfile=./tensorrt/x/file.json
+
+
+/usr/src/tensorrt/bin/trtexec \
+--onnx=yolov8n_torch.onnx \
+--saveEngine=./tensorrt/1/model.plan \
+--minShapes=input:1x3x320x320 \
+--optShapes=input:8x3x640x640 \
+--maxShapes=input:32x3x640x640 \
+--workspace=4096 \
+--iterations=1000 \
+--exportProfile=./tensorrt/1/exportProfile.json
+
+/usr/src/tensorrt/bin/trtexec \
+--onnx=yolov8n_torch.onnx \
+--saveEngine=./tensorrt/2/model.plan \
+--fp16 \
+--minShapes=input:1x3x320x320 \
+--optShapes=input:8x3x640x640 \
+--maxShapes=input:32x3x640x640 \
+--workspace=4096 \
+--iterations=1000 \
+--exportProfile=./tensorrt/2/exportProfile.json
+
+
+
+----------------------------------------------------------------------------------------- 
 
 c2: Python API (export_models.py)models
 
@@ -55,5 +89,4 @@ def build_engine(onnx_path, engine_path):
         f.write(engine_bytes)
     print("Build hoàn tất!")
 
-# Chạy thử
 build_engine("yolov8n.onnx", "model.plan")

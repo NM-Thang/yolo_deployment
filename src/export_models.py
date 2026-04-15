@@ -43,22 +43,28 @@ def export_models(export_onnx: bool, export_torch: bool, export_engine: bool, us
             format="onnx",
             dynamic=True,  
             simplify=True, 
-            opset=18,
+            opset=17,
             device=device
         )
     elif export_torch:
         print("\n[1/2] Exporting to ONNX (Dynamic)... with torch export method")
         # batch = torch.export.Dim("batch", min=1, max=1024)
 
+        # 2. Modify the Detect head to enable export mode
+        for module in model.modules():
+            if type(module).__name__ == 'Detect':
+                module.export = True      
+                module.format = 'onnx'
+
         torch.onnx.export(
             model.model.to(device),  
             torch.randn(1, 3, 640, 640).to(device), 
             str(model_dir / "yolov8n_torch.onnx"),  
             export_params=True,
-            opset_version=18,        
+            opset_version=17,        
             do_constant_folding=True,
             input_names=['input'],    
-            output_names=['output'],  
+            output_names=['output0'],  
             # dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}},
             # dynamic_shapes={'x': {0: batch}}
 

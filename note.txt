@@ -8,3 +8,290 @@ model_repository/yolov8_trt
 3 -> onnx2, f32
 4 -> onnx2, f16
 
+
+-----------------------------------------------------------------------------------------------------------------
+kich hoat conda
+source /data2/minhthang/miniconda3/bin/activate
+
+Trỏ đường dẫn môi trường
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+
+explain:
+- export: lệnh Linux -> khởi tạo/cập nhật một biến môi trường. 
+	Khi export, biến này sẽ có hiệu lực ở tất cả các chương trình con được chạy từ terminal đó
+
+LD_LIBRARY_PATH: biến môi trường đặc biệt trong Linux. Nó đóng vai trò như một "bản đồ" chỉ đường cho Dynamic Linker. 
+	Dynamic Linker này sẽ luôn tìm kiếm các file thư viện .so ở những đường dẫn được liệt kê trong biến này 
+	trước khi tìm trong các thư mục hệ thống như /usr/lib hay /lib/x86_64-linux-gnu/.
+
+$CONDA_PREFIX/lib:
+	- $CONDA_PREFIX: biến được Conda tự động tạo ra khi bạn kích hoạt một môi trường. 
+										Nó lưu chính xác đường dẫn gốc của môi trường đó 
+										(trong th nay la: /data2/minhthang/miniconda3/envs/yolo_deploy_env).
+
+	- /lib: để trỏ thẳng tới dir chứa các thư viện dùng chung nội bộ của Conda, 
+					nơi đang chứa file libstdc++.so.6 phiên bản mới hỗ trợ CXXABI_1.3.15.
+
+: (Dấu hai chấm): Dùng để phân cách các đường dẫn thư mục khác nhau trong Linux (giống như dấu chấm phẩy ; trên Windows).
+
+$LD_LIBRARY_PATH (ở cuối): Lấy lại giá trị hiện tại của biến này và nối vào phía sau. 
+														Việc này đảm bảo chỉ "chèn thêm" đường dẫn của Conda lên đầu danh sách ưu tiên, 
+														chứ không xóa mất các cấu hình liên kết thư viện cũ đang có sẵn trên hệ thống.
+
+
+-----------------------------------------------------------------------------------------------------------------
+# build trition inference server
+
+git clone https://github.com/triton-inference-server/server.git
+cd server
+
+python3 compose.py --backend onnxruntime --backend tensorrt --container-version 22.12
+
+hoac pull image ve (co tat ca backend)
+docker pull nvcr.io/nvidia/tritonserver:22.12-py3  (ly do sd 22.12 -> do gpu driver la cuda 11.8)
+
+
+# run triton inference server
+docker run --gpus all -it --rm \
+  -p 8000:8000 -p 8001:8001 -p 8002:8002 \
+  -v /data2/minhthang/yolo_deployment/model_repository:/models \
+  <image_name> \
+  tritonserver --model-repository=/models
+
+
+----------------------------------------------------------------------------------------------------------------- 
+cac flag:	
+- Source & Version
+	--backend / --backend-directory
+	--repoagent / --repoagent-directory
+	--container-version
+- Logging
+	-v / --verbose
+	- --quiet
+- Build Control
+	--dry-run
+	--work-dir
+	--build-type
+	--force
+cac backend
+- Framework chinh
+	+ tensorrt	: .engine
+	+ onnxruntime	: .onnx
+	+ pytorch	: .pt
+	+ tensorflow	: .graphdef / SavedModel
+	+ openvino	: model OpenVINO
+- Logic & tien xu ly
+	+ python	: ma nguon python tuy chinh
+	+ dali		: sd NVIDIA DALI de tang toc xu ly du lieu dau vao
+	+ fil		: (Forest inference Library) XGBoost, LightGBM, Scikit-Learn
+- LLM
+	+ tensorrtllm
+	+ vllm		: tich hop engine vLLM
+- backend he thong (mac dinh luon co)
+	+ ensemble	: dung de ket noi ca model 
+	
+	
+------------------------------------------------
+
+
+/ Container
+│
+├── opt/
+│   └── tritonserver/               <-- "Trái tim" của Server
+│       ├── bin/
+│       │   └── tritonserver        <-- File thực thi chính để khởi động server
+│       ├── lib/                    <-- Chứa các thư viện lõi hệ thống (.so)
+│       ├── backends/               <-- Nơi chứa các Backend 
+│       │   ├── onnxruntime/        <-- Thư viện phiên dịch cho ONNX
+│       │   ├── tensorrt/           <-- Thư viện phiên dịch cho TensorRT Engine
+│       │   └── ... 
+│       ├── repoagents/             <-- Các đại lý kiểm duyệt mô hình tự động
+│       │   └── checksum/           
+│       └── caches/                 <-- Các bộ nhớ đệm
+│           ├── local/
+│           └── redis/
+│
+├── usr/
+│   ├── local/
+│   │   └── cuda/                   <-- Bộ công cụ biên dịch CUDA (nvcc, thư viện toán học)
+│   └── lib/
+│       └── x86_64-linux-gnu/       <-- Nơi trú ngụ của các file lõi cuDNN và TensorRT
+│
+└── workspace/                      <-- (Hoặc /models) Không gian làm việc trống
+    │                                   Bạn sẽ dùng lệnh Docker (cờ -v) để "lắp" thư mục 
+    │                                   từ máy thật của bạn vào vị trí này.
+    │
+    └── model_repository/           <-- Kho chứa mô hình của bạn 
+        ├── model_A/
+        ├── model_B/
+        └── ...
+
+
+-----------------------------------------------------------------------------------------------------------------
+onnx runtime 
+
+1. Core Inference Engine
+- Thanh phan: InferenceSession, SessionOptions, và các công cụ tối ưu hóa đồ thị (Graph Optimizer).
+- Vai trò (Để làm gì): 
+	+ Tải file mô hình .onnx vào hệ thống.
+	+ Đọc hiểu kiến trúc mạng nơ-ron và áp dụng các phép biến đổi toán học để gộp/rút gọn các phép tính (Graph Optimization).
+	+ Điều phối quá trình tính toán đầu vào (Input) để cho ra kết quả dự đoán (Output).
+
+2. Execution Providers - EP (Cầu nối Phần cứng)
+
+- Thanh phan: Danh sách các backend phần cứng (CPUExecutionProvider, CUDAExecutionProvider (NVIDIA GPU), 
+																						TensorrtExecutionProvider, CoreMLExecutionProvider (Apple), 
+																						OpenVINOExecutionProvider (Intel), v.v.)
+
+- Vai trò:
+	+ Tách biệt logic của mô hình khỏi phần cứng vật lý.
+	+ Đảm bảo triết lý "Viết một lần, chạy mọi nơi". Tùy vào việc bạn cắm card đồ họa hay chip nào, 
+		EP tương ứng sẽ biên dịch các lệnh của ONNX thành ngôn ngữ máy tối ưu nhất cho thiết bị đó.
+
+3. Memory & Data Logistics
+
+- Thanh phan: OrtValue, cơ chế I/O Binding.
+
+Vai trò (Để làm gì):
+	+ Can thiệp trực tiếp vào cách bộ nhớ RAM và VRAM (trên GPU) được cấp phát.
+	+ Giúp giữ nguyên dữ liệu trên GPU giữa các bước tính toán, loại bỏ quá trình copy dữ liệu lãng phí giữa CPU và GPU, từ đó tăng tốc độ chạy lên mức tối đa.
+
+4. Model Compression
+
+- Thanh phan: Module onnxruntime.quantization.
+- Vai trò:
+	+ Giảm độ chính xác của các con số bên trong mô hình (FP62 -> FP16 -> INT8).
+	+ Giúp giảm kích thước mô hình xuống gấp 4 lần và tăng tốc độ xử lý, trong khi accuracy chỉ giảm đi một chút không đáng kể
+
+5. Training Engine
+
+- Thanh phan: Module onnxruntime.training, ORTModule.
+- Vai trò:
+	+ Tích hợp sâu vào PyTorch để tăng tốc quá trình train các mô hình ngôn ngữ lớn (LLMs).
+	+ Cho phép On-Device Training: fine-tune model ngay trên edge mà không cần gửi dữ liệu cá nhân lên server.
+
+6. Extensions
+
+- Thanh phan: Thư viện cài thêm onnxruntime-extensions.
+- Vai trò (Để làm gì):
+	+ Đóng gói các đoạn code tiền xử lý (như Tokenizers cho text, hay Audio processing cho âm thanh) trực tiếp vào bên trong file .onnx.
+	+ Giúp ứng dụng đầu cuối không cần phải cài đặt thêm các thư viện xử lý dữ liệu phức tạp nào khác bằng Python hay C++.
+
+
+-----------------------------------------------------------------------------------------------------------------
+tensorRT thanh phan:
+1. Network Definition& Parser
+2. Builder & BuilderConfig
+3. Optimizer
+	qua trinh tu dong dien ra khi build, thanh phan:
+		- Kernel auto-Tuning: TensorRT chứa một thư viện các implementation (gọi là tactics/kernels) 
+													khác nhau cho cùng một phép toán 
+													(ví dụ: có hàng chục cách để tính Convolution). 
+													Optimizer sẽ benchmark từng tactic trực tiếp trên GPU để chọn ra cái chạy nhanh nhất.
+		- Layer Fusion:
+			+ Vertical Fusion
+			+ Horizontal Fusion
+		- INT8 Calibrator: Nếu chọn INT8, thành phần này sẽ thu thập data distribution
+												từ một tập dữ liệu mẫu nhỏ để quantize trọng số 
+												mà không làm mất quá nhiều độ chính xác.
+4. Engine
+	- IcudaEngine: ket qua cuoi cung cua qua trinh build, la execution plan da duoc bien dich cu'ng,
+									chua trong so va thuan toan
+5. Runtime & Execution Context
+	- IRuntime: Doc file engine va deserialize no thanh doi tuong ICudaEngine tren RAM
+	- ExecutionContext: Duoc tao ra tu IcudaEngine, la noi luu tru stage va bo nho trung gian cho 1 lan inference
+
+Note:
+	- engine là “bản kế hoạch tính toán” đã compile từ .plan.
+	- context là “phiên làm việc inference cụ thể” được tạo từ engine để chạy thật.
+
+-----------------------------------------------------------------------------------------------------------------
+infer .plan
+
+quy trinh inference:
+1. Khởi tạo Engine và Context (Thiết lập một lần):
+ - Logger de theo doi loi
+ - Engine de giai ma nhi phan plan
+
+2. Cấp phát bộ nhớ (Memory Allocation): phải cấp phát hai vùng nhớ:
+
+	- Host Memory (CPU): Để giữ dữ liệu đầu vào và kết quả đầu ra trên RAM.
+	- Device Memory (GPU): Để chứa dữ liệu khi đang tính toán trên card đồ họa.
+
+3. processing
+	Tương tự như ONNX, đảm bảo dữ liệu đầu ra cuối cùng là một mảng NumPy phẳng 
+	hoặc khớp hoàn toàn với vùng nhớ host_mem đã cấp phát.
+
+4. Quy trình Inference thực tế
+	- H2D (Host to Device): Copy dữ liệu đã tiền xử lý từ RAM lên VRAM của GPU.
+	- Compute: Ra lệnh cho GPU thực hiện tính toán dựa trên context.
+	- D2H (Device to Host): Copy kết quả sau khi tính xong từ VRAM về lại RAM để CPU đọc được.
+
+5. Postprocessing
+
+
+-----------------------------------------------------------------------------------------------------------------
+binding: thuật ngữ dùng để chỉ các điểm giao tiếp bộ nhớ giữa CPU và GPU cho một mô hình cụ thể
+					Nó bao gồm cả dữ liệu đầu vào (input) và kết quả đầu ra (output).
+Binding Index: vị trí (số nguyên bắt đầu từ 0) của một tensor cụ thể trong mảng đó.
+								Ví dụ: Index 0 có thể là input ảnh, index 1 là output phân loại, 
+								index 2 là output tọa độ hộp (bounding box).
+
+
+pycuda.driver
+Đây là module cốt lõi, cung cấp giao diện (wrapper) trực tiếp để gọi các hàm từ CUDA Driver API của NVIDIA. 
+Cho phép điều khiển GPU ở mức thấp (low-level):
+	- Cấp phát bộ nhớ GPU (Memory Allocation): Yêu cầu GPU cấp phát các vùng nhớ (buffer) trên VRAM của nó 
+																							(thông qua hàm cuda.mem_alloc()) để chứa dữ liệu đầu vào (ảnh, text) 
+																							và đầu ra của mô hình AI.
+	- Truyền dữ liệu (Data Transfer): Thực hiện việc copy dữ liệu qua lại giữa RAM máy tính (Host) và VRAM của GPU 
+																			Các hàm thường dùng là cuda.memcpy_htod (Host to Device) và cuda.memcpy_dtoh (Device to Host).
+	- Quản lý luồng (Stream Management): Tạo và đồng bộ các CUDA streams để giúp GPU chạy nhiều tác vụ song song.
+
+pycuda.autoinit:
+- Để có thể gọi các hàm của pycuda.driver thao tác trên GPU, trước tiên bắt buộc phải thiết lập môi trường CUDA. 
+		Quá trình này bao gồm: khởi tạo CUDA driver, tìm kiếm GPU khả dụng, chọn GPU sẽ sử dụng, và tạo một "Ngữ cảnh" 
+		(CUDA Context - giống như một phiên làm việc độc lập trên GPU).
+- là một module tiện ích (helper) giúp tự động hóa toàn bộ quá trình tốn thời gian. 
+		Ngay khi bạn gọi câu lệnh import pycuda.autoinit, nó sẽ âm thầm thực hiện các công việc sau ở background:	
+		+ Khởi tạo CUDA API.	
+		+ Tự động chọn GPU mặc định (thường là GPU có index 0).
+		+ Tạo ra một CUDA context và gắn nó vào luồng (thread) hiện tại của Python.
+		+ Tự động dọn dẹp và giải phóng context khi chương trình Python kết thúc.
+
+
+-----------------------------------------------------------------------------------------------------------------
+stream = cuda.Stream()
+
+"Stream" giống như một băng chuyền công việc gửi từ máy chủ (CPU) sang nhà máy (GPU). 
+Các lệnh được đưa vào cùng một stream sẽ luôn chạy tuần tự. 
+Tuy nhiên, các lệnh ở các stream khác nhau có thể hoạt động song song cùng một lúc.
+
+Khi bạn làm việc với TensorRT, việc tạo và sử dụng cuda.Stream() có hai mục đích tối quan trọng để tối ưu hóa hiệu năng:
+
+1. Thực thi bất đồng bộ (Asynchronous Execution)
+Nếu không có custom stream, GPU sẽ dùng "Default Stream". 
+Khi đó, CPU gửi lệnh cho GPU và sẽ bị (block) để ngồi chờ GPU chạy xong thì CPU mới được làm bước tiếp theo.
+
+Khi tạo cuda.Stream(), có thể ra lệnh cho GPU chạy background. 
+Nhờ vậy, CPU có thể rảnh rỗi để làm việc khác ngay lập tức 
+(ví dụ: đọc ảnh tiếp theo từ camera, tiền xử lý dữ liệu) trong khi GPU đang bận rộn chạy AI model.
+
+2. Chồng chéo công việc (Overlapping Compute & Data Transfer)
+Đây là kỹ thuật giúp phần cứng chạy với công suất tối đa. 
+Việc truyền dữ liệu từ RAM vào GPU (Memory Copy) và việc tính toán (Compute) do hai bộ phận độc lập trên GPU đảm nhiệm.
+
+Nhờ dùng CUDA Stream, có thể thiết kế để GPU vừa tính toán cho bức ảnh số 1,
+vừa copy dữ liệu của bức ảnh số 2 vào VRAM. 
+Kỹ thuật "Pipelining" này giúp giảm đáng kể độ trễ (latency) tổng thể.
+
+
+-----------------------------------------------------------------------------------------------------------------
+test inference_tensorrt
+
+python3 src/infer_tensorrt.py \
+  --engine-path models/tensorrt/2/model.plan
+
+Điểm quan trọng:
+Dynamic engine cho phép đổi shape giữa các lần infer.
+Nhưng trong một lần infer (một batch tensor), toàn bộ sample vẫn phải cùng shape để tạo được tensor NCHW.
