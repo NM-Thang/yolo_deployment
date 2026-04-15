@@ -14,9 +14,9 @@ def preprocess_image_single(image_path: str | Path, input_size: tuple = (640, 64
     if img is None:
         raise ValueError(f"Cannot read image from {img_path_str}")
 
-    # img_resized = cv2.resize(img, input_size)
-    # img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img_resized = cv2.resize(img, input_size)
+    img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+    # img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img_chw = img_rgb.transpose((2, 0, 1))
     return img_chw.astype(np.float32) / 255.0
 

@@ -67,8 +67,6 @@ def _run_engine_batch(trt: Any, engine: Any, context: Any, batch_tensor: np.ndar
             "Missing PyCUDA. Install it in this environment to run TensorRT local inference."
         ) from exc
 
-    stream = cuda.Stream()
-
     input_idx = None
     output_indices: list[int] = []
     for idx in range(engine.num_bindings):
@@ -80,36 +78,42 @@ def _run_engine_batch(trt: Any, engine: Any, context: Any, batch_tensor: np.ndar
     if input_idx is None:
         raise RuntimeError("No input binding found in TensorRT engine.")
 
-    if not context.set_binding_shape(input_idx, tuple(batch_tensor.shape)):
-        raise RuntimeError(f"Failed to set input shape: {tuple(batch_tensor.shape)}")
-
-    device_buffers: list[int] = [0] * engine.num_bindings
-
+    # Ensure batch_tensor is contiguous and correct dtype
     input_dtype = trt.nptype(engine.get_binding_dtype(input_idx))
     input_host = np.ascontiguousarray(batch_tensor.astype(input_dtype, copy=False))
-    input_device = cuda.mem_alloc(input_host.nbytes) 
-    device_buffers[input_idx] = int(input_device) 
+    
+    print(f"  Input batch shape: {input_host.shape}, dtype: {input_host.dtype}, nbytes: {input_host.nbytes}")
+    
+    if not context.set_binding_shape(input_idx, tuple(input_host.shape)):
+        raise RuntimeError(f"Failed to set input shape: {tuple(input_host.shape)}")
 
+    device_buffers: list[Any] = [None] * engine.num_bindings
+
+    # Allocate output buffers AFTER setting input shape
     host_outputs: list[np.ndarray] = []
     output_devices = []
     for out_idx in output_indices:
         out_shape = tuple(context.get_binding_shape(out_idx))
         out_dtype = trt.nptype(engine.get_binding_dtype(out_idx))
+        print(f"  Output {out_idx} shape: {out_shape}, dtype: {out_dtype}")
         out_host = np.empty(out_shape, dtype=out_dtype)
         out_device = cuda.mem_alloc(out_host.nbytes)
 
         host_outputs.append(out_host)
         output_devices.append(out_device)
-        device_buffers[out_idx] = int(out_device)
+        device_buffers[out_idx] = out_device
 
-    cuda.memcpy_htod_async(input_device, input_host, stream)
-    if not context.execute_async_v2(bindings=device_buffers, stream_handle=stream.handle):
-        raise RuntimeError("TensorRT execute_async_v2 failed.")
+    # Now allocate input buffer and set binding
+    input_device = cuda.mem_alloc(input_host.nbytes) 
+    device_buffers[input_idx] = input_device
+    print(f"  Allocated input GPU memory: {input_host.nbytes} bytes")
+
+    cuda.memcpy_htod(input_device, input_host)
+    if not context.execute_v2(bindings=device_buffers):
+        raise RuntimeError("TensorRT execute_v2 failed.")
 
     for host_output, out_device in zip(host_outputs, output_devices):
-        cuda.memcpy_dtoh_async(host_output, out_device, stream)
-
-    stream.synchronize()
+        cuda.memcpy_dtoh(host_output, out_device)
     return host_outputs
 
 

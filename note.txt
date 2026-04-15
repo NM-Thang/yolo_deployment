@@ -118,10 +118,10 @@ cac backend
 │       └── x86_64-linux-gnu/       <-- Nơi trú ngụ của các file lõi cuDNN và TensorRT
 │
 └── workspace/                      <-- (Hoặc /models) Không gian làm việc trống
-    │                                   Bạn sẽ dùng lệnh Docker (cờ -v) để "lắp" thư mục 
+    │                                   Dùng lệnh Docker (cờ -v) để "lắp" thư mục 
     │                                   từ máy thật của bạn vào vị trí này.
     │
-    └── model_repository/           <-- Kho chứa mô hình của bạn 
+    └── model_repository/           <-- Kho chứa mô hình
         ├── model_A/
         ├── model_B/
         └── ...
@@ -295,3 +295,13 @@ python3 src/infer_tensorrt.py \
 Điểm quan trọng:
 Dynamic engine cho phép đổi shape giữa các lần infer.
 Nhưng trong một lần infer (một batch tensor), toàn bộ sample vẫn phải cùng shape để tạo được tensor NCHW.
+
+
+-----------------------------------------------------------------------------------------------------------------
+
+dung triton server
+docker run --gpus '"device=4"' -it --rm \
+  -p 8000:8000 -p 8001:8001 -p 8002:8002 \
+  -v /data2/minhthang/yolo_deployment/model_repository:/models \
+  20d3e6634cd3 \
+  tritonserver --model-repository=/models

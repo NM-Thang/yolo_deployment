@@ -1,24 +1,27 @@
 name: "yolov8_trt"
 platform: "tensorrt_plan"
-max_batch_size: 4
+max_batch_size: 32
+
+version_policy: { all: {} } # 1 - FP32, 2 - FP16
 
 dynamic_batching {
-    max_queue_delay_microseconds: 500
+  preferred_batch_size: [ 4, 8, 16, 32 ]
+  max_queue_delay_microseconds: 500
 }
 
 input [
   {
     name: "input"
     data_type: TYPE_FP32
-    dims: [3, 640, 640]
+    dims: [3, -1, -1]
   }
 ]
 
 output [
   {
     name: "output0"
-    data_type: TYPE_FP16
-    dims: [ 84, 8400 ]
+    data_type: TYPE_FP32
+    dims: [ -1, -1 ]
   }
 ]
 

@@ -20,24 +20,24 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 
 /usr/src/tensorrt/bin/trtexec \
 --onnx=yolov8n_torch.onnx \
---saveEngine=./tensorrt/1/model.plan \
+--saveEngine=model32.plan \
 --minShapes=input:1x3x320x320 \
 --optShapes=input:8x3x640x640 \
 --maxShapes=input:32x3x640x640 \
 --workspace=4096 \
 --iterations=1000 \
---exportProfile=./tensorrt/1/exportProfile.json
+--exportProfile=./tensorrt/1/exportProfile32.json
 
 /usr/src/tensorrt/bin/trtexec \
 --onnx=yolov8n_torch.onnx \
---saveEngine=./tensorrt/2/model.plan \
+--saveEngine=model16.plan \
 --fp16 \
 --minShapes=input:1x3x320x320 \
 --optShapes=input:8x3x640x640 \
 --maxShapes=input:32x3x640x640 \
 --workspace=4096 \
 --iterations=1000 \
---exportProfile=./tensorrt/2/exportProfile.json
+--exportProfile=./tensorrt/2/exportProfile16.json
 
 
 
