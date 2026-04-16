@@ -4,6 +4,7 @@ import argparse
 import importlib
 from pathlib import Path
 
+import cv2
 import numpy as np
 
 from utils.image_processing import preprocess_image
@@ -63,7 +64,13 @@ def main() -> None:
 	input_name = args.input_name or inferred_input_name
 	output_name = args.output_name or inferred_output_name
 
+	original_image = cv2.imread(str(image_path))
+	if original_image is None:
+		raise ValueError(f"Cannot read image from {image_path}")
+	orig_size = (original_image.shape[1], original_image.shape[0])
+
 	image_tensor = preprocess_image(image_path)
+	input_size = (image_tensor.shape[3], image_tensor.shape[2])
 	infer_input = tritonclient.InferInput(input_name, image_tensor.shape, "FP32")
 	
 	infer_input.set_data_from_numpy(image_tensor)
@@ -78,7 +85,8 @@ def main() -> None:
 
 	detections = postprocess_yolo(
 		raw_output=raw_output,
-		image_size=(image_tensor.shape[3], image_tensor.shape[2]),
+		input_size=input_size,
+		orig_size=orig_size,
 		confidence_threshold=0.5,
 		iou_threshold=0.45,
 		top_k=20,
@@ -96,7 +104,7 @@ def main() -> None:
 			f"score={det.score:.3f} | box=({x1:.1f}, {y1:.1f}, {x2:.1f}, {y2:.1f})"
 		)
 
-	# show_detections(image_path, detections)
+	show_detections(image_path, detections)
 
 
 if __name__ == "__main__":

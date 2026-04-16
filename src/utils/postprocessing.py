@@ -119,7 +119,8 @@ def _normalize_output(output: np.ndarray) -> np.ndarray:
 
 def postprocess_yolo(
 	raw_output: np.ndarray,
-	image_size: tuple[int, int],
+	input_size: tuple[int, int],
+	orig_size: tuple[int, int],
 	confidence_threshold: float = 0.5,
 	iou_threshold: float = 0.45,
 	top_k: int = 10,
@@ -138,7 +139,11 @@ def postprocess_yolo(
 		return []
 
 	detections = filtered[0].cpu()
-	detections[:, :4] = scale_boxes((640, 640), detections[:, :4], (image_size[1], image_size[0])).round()
+	detections[:, :4] = scale_boxes(
+		(input_size[1], input_size[0]),
+		detections[:, :4],
+		(orig_size[1], orig_size[0]),
+	).round()
 
 	results: list[Detection] = []
 	for det in detections:
