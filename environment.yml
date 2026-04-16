@@ -1,13 +1,20 @@
 name: yolo_deploy_env
 channels:
+  - pytorch
+  - nvidia
+  - conda-forge
   - defaults
 dependencies:
-  - onnxruntime=1.18
-  - pip
-  - pytorch=2.4
-  - onnx=1.16.1
-  - pytorch-cuda=11.8
-  - torchvision=0.19
   - python=3.10
-  - opencv[version='>=4.10.0']
-  - cuda-toolkit=11.8
+  - pip
+  - pytorch=2.4.*
+  - torchvision=0.19.*
+  - pytorch-cuda=11.8
+  - numpy<2.0.0
+  - opencv>=4.10.0
+  - onnx=1.16.1
+  - onnxruntime=1.18.*
+  - pip:
+      - ultralytics==8.3.*
+      - tritonclient[all]==2.29.0
+      - onnxscript

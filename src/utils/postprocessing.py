@@ -109,7 +109,7 @@ def _normalize_output(output: np.ndarray) -> np.ndarray:
 		raise ValueError(f"Unsupported YOLO output shape: {output.shape}")
 
 	if output.shape[0] in (84, 85) and output.shape[1] > output.shape[0]:
-		output = output.T
+		output = output.T # -> (num_boxes, 84/85)
 
 	if output.shape[1] < 5:
 		raise ValueError(f"YOLO output has too few columns: {output.shape}")
@@ -126,8 +126,7 @@ def postprocess_yolo(
 	class_names: tuple[str, ...] = DEFAULT_COCO_CLASSES,
 ) -> list[Detection]:
 	predictions = _normalize_output(raw_output)
-	# Ultralytics NMS expects [batch, num_boxes, 4 + num_classes]
-	predictions_tensor = torch.from_numpy(predictions.T[None, ...])
+	predictions_tensor = torch.from_numpy(predictions.T[None, ...])  # YOLO output format: (batch, 85/84, num_boxes)
 	filtered = non_max_suppression(
 		predictions_tensor,
 		conf_thres=confidence_threshold,

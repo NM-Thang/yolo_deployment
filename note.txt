@@ -305,3 +305,23 @@ docker run --gpus '"device=4"' -it --rm \
   -v /data2/minhthang/yolo_deployment/model_repository:/models \
   20d3e6634cd3 \
   tritonserver --model-repository=/models
+
+
+docker run --gpus "device=4" -it --name triton_srv -p 8000:8000 -p 8001:8001 -p 8002:8002 -v /data2/minhthang/yolo_deployment/model_repository:/models 20d3e6634cd3 tritonserver --model-repository=/models --log-verbose=1
+
+-----------------------------------------------------------------------------------------------------------------
+Postprocessing
+
+3 pp:
+1. Export model đã có NMS sẵn
+2. Dùng Ensemble trong Triton
+	- Model 1 (Core Model)
+	- Model 2 (Post-processing): Thường được viết bằng Python Backend của Triton. 
+						nhận output thô từ Model 1 và chạy các hàm NMS (thường dùng NumPy hoặc Torch).
+3. Dùng TensorRT engine có NMS plugin (th onnx co san nms chuan)
+	- NVIDIA cung cấp sẵn một plugin cực kỳ tối ưu tên là EfficientNMS
+	- th onnx tho -> onnx-graphsurgeo: mở file ONNX thô ra, 
+																			"cắt bỏ" các đầu ra lộn xộn, 
+																			và "nối" thêm một node C++ Plugin tên là EfficientNMS_TRT vào cuối đồ thị.
+								-> ONNX đã qua phẫu thuật (Modified ONNX).
+								-> trtexec

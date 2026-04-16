@@ -34,6 +34,20 @@ def show_detections(
 	wait_ms: int = 0,
 ) -> None:
 	image = draw_detections(image_path, detections)
-	cv2.imshow(window_name, image)
-	cv2.waitKey(wait_ms)
-	cv2.destroyAllWindows()
+	try:
+		cv2.imshow(window_name, image)
+		if wait_ms > 0:
+			cv2.waitKey(wait_ms)
+		else:
+			while True:
+				key = cv2.waitKey(20) & 0xFF
+				if key == ord("q") or key == 27:
+					break
+				if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+					break
+		cv2.destroyAllWindows()
+	except cv2.error as exc:
+		raise RuntimeError(
+			"OpenCV GUI is unavailable on this environment. "
+			"Run without visualization or save the output image instead."
+		) from exc
