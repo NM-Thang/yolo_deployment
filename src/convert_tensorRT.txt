@@ -1,7 +1,7 @@
 c1: trtexed tool
 ----------------------------------------------------------------------------------
 1 -> mount folder lam viec vao container
-docker run --gpus '"device=x"' -it --rm -v $PWD:/workspace 20d3e6634cd3 /bin/bash
+docker run --gpus '"device=4"' -it --rm -v $PWD:/workspace 20d3e6634cd3 /bin/bash
 
 (can nhac neu file tao ra trong container can sua)
 docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/workspace 20d3e6634cd3 /bin/bash
@@ -23,22 +23,21 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --saveEngine=model32.plan \
 --minShapes=input:1x3x320x320 \
 --optShapes=input:8x3x640x640 \
---maxShapes=input:32x3x640x640 \
+--maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=1000 \
---exportProfile=./tensorrt/1/exportProfile32.json
+--iterations=100 \
+--exportProfile=exportProfile32.json
 
 /usr/src/tensorrt/bin/trtexec \
 --onnx=yolov8n_torch.onnx \
---saveEngine=model16v2.plan \
+--saveEngine=model16v1.plan \
 --fp16 \
 --minShapes=input:8x3x320x320 \
 --optShapes=input:32x3x640x640 \
 --maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=1000 \
---exportProfile=./tensorrt/2/exportProfile16.json
-
+--iterations=100 \
+--exportProfile=exportProfile16.json
 
 
 /usr/src/tensorrt/bin/trtexec \
@@ -49,8 +48,8 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --optShapes=input:32x3x384x640 \
 --maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=2000 \
---exportProfile=./tensorrt/2/exportProfile16v2.json
+--iterations=100 \
+--exportProfile=exportProfile16v2.json
 
 /usr/src/tensorrt/bin/trtexec \
 --onnx=yolov8n_torch.onnx \
@@ -60,8 +59,8 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --optShapes=input:64x3x384x640 \
 --maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=4000 \
---exportProfile=./tensorrt/2/exportProfile16v3.json
+--iterations=100 \
+--exportProfile=exportProfile16v3.json
 
 ----------------------------------------------------------------------------------------- 
 
