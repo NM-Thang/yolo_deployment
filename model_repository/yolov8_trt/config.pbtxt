@@ -1,6 +1,6 @@
 name: "yolov8_trt"
 platform: "tensorrt_plan"
-max_batch_size: 32
+max_batch_size: 64
 
 version_policy: { all: {} } # 1 - FP32, 2 - FP16
 
