@@ -21,16 +21,15 @@ def load_triton_client(protocol: str, server_url: str):
 
 
 def get_model_tensors(client, model_name: str, model_version: str | None) -> tuple[str, str]:
-	if model_version is None:
-		model_version = ""
 	metadata = client.get_model_metadata(model_name, model_version)
 	if not metadata.inputs or not metadata.outputs:
 		raise RuntimeError(f"Model '{model_name}' does not expose inputs/outputs")
 	return metadata.inputs[0].name, metadata.outputs[0].name
 
 def run(batch_input: np.ndarray = None, host: str = "localhost", protocol: str = "grpc", model_name: str = "yolov8_onnx", model_version: str = None) -> np.ndarray:
-
 	tritonclient, client = load_triton_client(protocol=protocol, server_url=host)
+	if model_version is None:
+		model_version = ""
 	if not client.is_server_ready():
 		raise RuntimeError(f"Triton server is not ready at {host}")
 	if not client.is_model_ready(model_name, model_version):
@@ -42,8 +41,6 @@ def run(batch_input: np.ndarray = None, host: str = "localhost", protocol: str =
 		raise ValueError("batch_input is required for inference")
 
 	image_tensor = batch_input
-	print(f"Batch input shape: {image_tensor.shape}, dtype: {image_tensor.dtype}")
-
 	infer_input = tritonclient.InferInput(inferred_input_name, image_tensor.shape, "FP32")
 	infer_input.set_data_from_numpy(image_tensor)
 
