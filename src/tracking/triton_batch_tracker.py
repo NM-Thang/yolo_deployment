@@ -106,13 +106,12 @@ class VideoBatchTracker:
 
             if not ret:
                 break
-        
-        num_batches = pbar.n / self.batch_size
+
 
         pbar.close()
-        print(f"Average time per preprocess: {avg_time_per_preprocess / num_batches:.4f} s")
-        print(f"Average time per inference: {avg_time_per_inference / num_batches:.4f} s")
-        print(f"Average time per postprocess: {avg_time_per_postprocess / num_batches:.4f} s")
+        print(f"Average time per preprocess: {avg_time_per_preprocess / pbar.n:.4f} s")
+        print(f"Average time per inference: {avg_time_per_inference / pbar.n:.4f} s")
+        print(f"Average time per postprocess: {avg_time_per_postprocess / pbar.n:.4f} s")
 
         # fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         # writer = cv2.VideoWriter(self.output_path, fourcc, fps if fps > 0 else 30, orig_size)
