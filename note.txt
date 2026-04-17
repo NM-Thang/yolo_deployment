@@ -307,12 +307,11 @@ docker run --gpus '"device=4"' -it --rm \
   tritonserver --model-repository=/models
 
 
-docker run --gpus "device=4" -it --rm --name triton_srv \
-	-p 8000:8000 -p 8001:8001 -p 8002:8002 \
-	-v /data2/minhthang/yolo_deployment/model_repository:/models \
-	20d3e6634cd3 \
-	tritonserver --model-repository=/models --log-verbose=1
-
+docker run --gpus "device=4" --rm -it --name triton_srv \
+-p 8000:8000 -p 8001:8001 -p 8002:8002 \
+-v /data2/minhthang/yolo_deployment/model_repository:/models \
+20d3e6634cd3 \
+tritonserver --model-repository=/models --log-verbose=1
 
 -----------------------------------------------------------------------------------------------------------------
 Postprocessing
