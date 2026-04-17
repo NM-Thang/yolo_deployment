@@ -4,19 +4,16 @@ import numpy as np
 
 from utils.inference_io import preprocess_batch
 from utils.postprocessing import postprocess_yolo
-from triton_client import run
-
+from triton_client import TritonClient
 
 from sort import Sort
 
 class VideoBatchTracker:
-    def __init__(self, video_path, host="localhost", protocol="grpc", model_name="yolov8n_trt", model_version=None, batch_size=8):
+    def __init__(self, video_path, batch_size=8):
         self.video_path = video_path
-        self.host = host
-        self.protocol = protocol
         self.batch_size = batch_size
-        self.model_name = model_name
-        self.model_version = model_version
+        self.triton_client = TritonClient()
+
 
         self.tracker = Sort(max_age=5, min_hits=3, iou_threshold=0.3)
 
@@ -39,7 +36,7 @@ class VideoBatchTracker:
             if len(frames_buffer) == self.batch_size or (not ret and len(frames_buffer) > 0):
                 
                 batch_input = preprocess_batch(frames_buffer) 
-                batch_outputs = run(batch_input=batch_input, host=self.host, protocol=self.protocol, model_name=self.model_name, model_version=self.model_version)
+                batch_outputs = self.triton_client.run(batch_input=batch_input)
                 
                 input_size = (batch_input.shape[3], batch_input.shape[2])  # (W, H) for postprocessing
                 for i in range(len(frames_buffer)):
@@ -87,13 +84,9 @@ class VideoBatchTracker:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Triton Batch Tracking Example")
     parser.add_argument("--video-path", type=str, default="data/videos/people-detection.mp4", help="Path to input video")
-    parser.add_argument("--model-name", type=str, default="yolov8_trt", help="Triton model name")
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size for inference")
-    parser.add_argument("--host", type=str, default="localhost", help="Triton server URL")
-    parser.add_argument("--protocol", type=str, default="grpc", choices=["grpc", "http"], help="Triton protocol")
-    parser.add_argument("--model-version", type=str, default=None, help="Triton model version")
 
-    args = parser.parse_args()
+    args = parser.parse_known_args()[0]
     return args
 
 if __name__ == "__main__":
@@ -101,10 +94,6 @@ if __name__ == "__main__":
 
     tracker_app = VideoBatchTracker(
         video_path=args.video_path,
-        host=args.host,
-        protocol=args.protocol,
-        model_name=args.model_name,
-        model_version=args.model_version,
         batch_size=args.batch_size
     )
     tracker_app.run()
