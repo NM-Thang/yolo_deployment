@@ -46,6 +46,9 @@ class VideoBatchTracker:
         frames_buffer = []
         frames_results = []
 
+        avg_time_per_preprocess = 0
+        avg_time_per_inference = 0
+        avg_time_per_postprocess = 0
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -57,9 +60,9 @@ class VideoBatchTracker:
                 
                 t0 = time.perf_counter()
                 batch_input = preprocess_batch(frames_buffer) 
-                t1 = time.perf_counter() - t0
+                t1 = time.perf_counter()
                 batch_outputs = self.triton_client.run(batch_input=batch_input)
-                t2 = time.perf_counter() - t1
+                t2 = time.perf_counter()
                 
                 input_size = (batch_input.shape[3], batch_input.shape[2])  # (W, H) for postprocessing
                 for i in range(len(frames_buffer)):
@@ -92,17 +95,24 @@ class VideoBatchTracker:
                         cv2.putText(current_frame, f"ID: {track_id}", (x1, y1 - 10), 
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
                     frames_results.append(current_frame)
-                t3 = time.perf_counter() - t2
+                t3 = time.perf_counter()
                 pbar.update(len(frames_buffer))
                 
                 frames_buffer = []
             
-                print(f"Preprocess: {t1:.3f}s, Inference: {t2:.3f}s, Postprocess+Track: {t3:.3f}s")
+                avg_time_per_postprocess += (t3 - t2)
+                avg_time_per_preprocess += (t1 - t0)
+                avg_time_per_inference += (t2 - t1)
 
             if not ret:
                 break
         
+        num_batches = pbar.n / self.batch_size
+
         pbar.close()
+        print(f"Average time per preprocess: {avg_time_per_preprocess / num_batches:.4f} s")
+        print(f"Average time per inference: {avg_time_per_inference / num_batches:.4f} s")
+        print(f"Average time per postprocess: {avg_time_per_postprocess / num_batches:.4f} s")
 
         # fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         # writer = cv2.VideoWriter(self.output_path, fourcc, fps if fps > 0 else 30, orig_size)
