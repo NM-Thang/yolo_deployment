@@ -3,12 +3,14 @@ from pathlib import Path
 import cv2
 from utils.postprocessing import Detection
 
+def draw_detections(image: str | Path | cv2.Mat, detections: list[Detection]) -> cv2.Mat:
+	
+	if not isinstance(image, cv2.Mat):
+		img_path_str = str(image)
+		image = cv2.imread(img_path_str)
 
-def draw_detections(image_path: str | Path, detections: list[Detection]) -> cv2.Mat:
-	image_path = Path(image_path)
-	image = cv2.imread(str(image_path))
 	if image is None:
-		raise ValueError(f"Cannot read image from {image_path}")
+		raise ValueError(f"Cannot read image from {image}")
 
 	for det in detections:
 		x1, y1, x2, y2 = map(int, det.box)
