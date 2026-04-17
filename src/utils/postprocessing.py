@@ -127,7 +127,8 @@ def postprocess_yolo(
 	class_names: tuple[str, ...] = DEFAULT_COCO_CLASSES,
 ) -> list[Detection]:
 	predictions = _normalize_output(raw_output)
-	predictions_tensor = torch.from_numpy(predictions.T[None, ...])  # YOLO output format: (batch, 85/84, num_boxes)
+	# predictions_tensor = torch.from_numpy(predictions.T[None, ...])
+	predictions_tensor = torch.from_numpy(predictions.copy().T[None, ...])
 	filtered = non_max_suppression(
 		predictions_tensor,
 		conf_thres=confidence_threshold,
