@@ -2,7 +2,6 @@ from pathlib import Path
 import numpy as np
 from utils.image_processing import preprocess_image_single
 
-
 SUPPORTED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp"}
 
 

@@ -329,3 +329,60 @@ Postprocessing
 																			và "nối" thêm một node C++ Plugin tên là EfficientNMS_TRT vào cuối đồ thị.
 								-> ONNX đã qua phẫu thuật (Modified ONNX).
 								-> trtexec
+
+
+-----------------------------------------------------------------------------------------------------------------
+module tracking - phan loai:
+	- Kỹ thuật truyền thống (Classical)
+		+ Centroid Tracking: Theo dõi dựa trên tọa độ tâm của đối tượng.
+													Đơn giản, nhanh nhưng dễ nhầm lẫn nếu các đối tượng đi chéo nhau.
+
+		+ Optical Flow: Theo dõi sự di chuyển của từng pixel giữa hai khung hình liên tiếp.
+
+	- Kỹ thuật dựa trên Deep Learning (SOTA)
+		+ DeepSORT: Kết hợp giữa Kalman Filter và một mạng Neural để trích xuất đặc điểm ngoại hình (appearance features). 
+								Điều này giúp module nhận diện lại đúng đối tượng ngay cả khi chúng bị che khuất tạm thời (occlusion).
+
+		+ Siamese Networks: Sử dụng hai mạng neural song song để so sánh độ tương đồng giữa vật thể mục tiêu
+												và các vùng trên khung hình mới.
+
+		+ ByteTrack: Tận dụng "bounding box" có độ tin cậy thấp để giảm thiểu việc mất dấu đối tượng.
+
+	- sort tracking (Simple Online and Realtime Tracking) - thanh phan:
+		+ A. Detection -> model yolo/faster R-CNN, ...
+
+		+ B. Estimation Model
+			- Sử dụng BKalman Filter để dự đoán vị trí của đối tượng ở khung hình tiếp theo.
+			- Khi một đối tượng được phát hiện, Kalman Filter sẽ bắt đầu theo dõi vận tốc và hướng di chuyển của nó.
+			- Nếu ở frame tiếp theo, Detector mất dấu đối tượng, Kalman Filter có thể dự đoán vị trí "xấp xỉ" của đối tượng đó. 
+
+		+ C. Data Association
+			- IOU: SORT tính toán độ khớp (Overlap) giữa khung bao dự đoán và khung bao thực tế.
+			- Hungarian Algorithm: Thuật toán tối ưu hóa giúp gán ID từ các đối tượng cũ sang các đối tượng mới 
+															sao cho tổng độ lệch IOU là nhỏ nhất.
+
+		+ D. Creation and Deletion of Track IDs
+			- Khởi tạo: Nếu một phát hiện mới không khớp với bất kỳ đối tượng cũ nào, một ID mới sẽ được tạo ra.
+			- Xóa bỏ: Nếu một ID không được tìm thấy trong một số lượng khung hình nhất định (tham số max_age), 
+					nó sẽ bị xóa để giải phóng bộ nhớ.
+
+	- 3. Pipeline
+		+ 1. Frame t: Detector tìm ra các Bounding Boxes.
+		+ 2. Dự đoán: Kalman Filter dự đoán vị trí các ID hiện có tại Frame t.
+		+ 3. So khớp: Dùng thuật toán Hungarian so sánh Bounding Boxes thực tế với vị trí dự đoán thông qua chỉ số IOU.
+		+ Cập nhật:
+			- Cập nhật trạng thái Kalman Filter cho các ID đã khớp.
+			- Tạo ID mới cho các phát hiện dư thừa.
+			- Xóa ID cũ không tìm thấy.
+
+
+-----------------------------------------------------------------------------------------------------------------
+pp xu ly:
+- Frame-by-Frame
+- Client-side Batching
+
+-> Gửi từng Frame + Bật "Dynamic Batching?
+-> phu thuoc vao bai toan xu ly? Offline Video/Live Stream
+	+ Offline Video -> Throughput (thông lượng - làm sao xử lý toàn bộ video trong thời gian ngắn nhất)
+	+ Live Stream -> Latency (Do tre - phản hồi theo thời gian thực.)
+

@@ -14,7 +14,10 @@ dependencies:
   - opencv>=4.10.0
   - onnx=1.16.1
   - onnxruntime=1.18.*
+  - scikit-learn
   - pip:
       - ultralytics==8.3.*
       - tritonclient[all]==2.29.0
       - onnxscript
+      - filterpy
+      - lap

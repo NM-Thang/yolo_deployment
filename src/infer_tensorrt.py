@@ -161,7 +161,7 @@ def test_tensorrt_local(
             print(f"  Output {idx} shape: {output.shape}, dtype: {output.dtype}")
 
 
-def build_arg_parser() -> argparse.ArgumentParser:
+def parse_args() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run local TensorRT (.plan) inference")
     parser.add_argument("--engine-path", default="models/tensorrt/2/model.plan", help="Path to TensorRT .plan engine")
     parser.add_argument(
@@ -171,12 +171,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--image-dir", default=None, help="Optional directory of images to infer")
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size when --image-dir is used")
-    return parser
+
+    args = parser.parse_args()
+    return args
 
 
 if __name__ == "__main__":
-    parser = build_arg_parser()
-    args = parser.parse_args()
+    args = parse_args()
 
     project_root = Path(__file__).resolve().parent.parent
 

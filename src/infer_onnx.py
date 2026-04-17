@@ -83,7 +83,7 @@ def infer_by_mode(
     )
 
 
-def build_arg_parser() -> argparse.ArgumentParser:
+def parse_args() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run local inference for ONNX models")
     parser.add_argument("--mode", choices=("ultralytics", "torch"), default="ultralytics")
     parser.add_argument("--model-path", default=None, help="Optional custom ONNX model path")
@@ -96,12 +96,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size when --image-dir is used")
     parser.add_argument("--provider", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--gpu-id", type=int, default=0, help="GPU device ID for CUDA provider")
-    return parser
+
+    args = parser.parse_args()
+    return args
 
 
 if __name__ == "__main__":
-    parser = build_arg_parser()
-    args = parser.parse_args()
+    args = parse_args()
 
     project_root = Path(__file__).resolve().parent.parent
 
