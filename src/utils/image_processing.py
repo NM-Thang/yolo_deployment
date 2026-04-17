@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from pathlib import Path
-
+from typing import Union
 
 def _dynamic_letterbox(
     img: np.ndarray,
@@ -44,13 +44,16 @@ def _dynamic_letterbox(
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(pad_value,) * 3)
 
 
-def preprocess_image_single(image_path: str | Path, input_size: tuple = (640, 640)) -> np.ndarray:
+def preprocess_image_single(image_path: str | Path | np.ndarray, input_size: tuple = (640, 640)) -> np.ndarray:
     """Read and preprocess a single image for YOLOv8 (ONNX/Triton).
 
     Returns a tensor with shape (3, H, W).
     """
-    img_path_str = str(image_path)
-    img = cv2.imread(img_path_str)
+    if not isinstance(image_path, np.ndarray):
+        img_path_str = str(image_path)
+        img = cv2.imread(img_path_str)
+    else:
+        img = image_path
 
     if img is None:
         raise ValueError(f"Cannot read image from {img_path_str}")
