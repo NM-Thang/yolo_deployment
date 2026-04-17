@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from http import client
 import importlib
 import numpy as np
 
@@ -11,6 +12,8 @@ class TritonClient:
 		self.protocol = args.protocol
 		self.model_name = args.model_name
 		self.model_version = args.model_version
+
+		self.tritonclient, self.client = self.load_triton_client()
 
 	def load_triton_client(self):
 		if self.protocol == "grpc":
@@ -24,33 +27,34 @@ class TritonClient:
 		url = f"{self.host}:{default_port}"
 
 		return tritonclient, tritonclient.InferenceServerClient(url=url, verbose=False)
+	
+	def check_server_and_model(self):
+		if not self.client.is_server_ready():
+			return False
+		if not self.client.is_model_ready(self.model_name, self.model_version):
+			return False
+		return True
+		
 
-	def get_model_tensors(self, client, model_name: str, model_version: str | None) -> tuple[str, str]:
-		metadata = client.get_model_metadata(model_name, model_version)
+	def get_model_tensors(self,) -> tuple[str, str]:
+		metadata = self.client.get_model_metadata(self.model_name, self.model_version)
 		if not metadata.inputs or not metadata.outputs:
-			raise RuntimeError(f"Model '{model_name}' does not expose inputs/outputs")
+			raise RuntimeError(f"Model '{self.model_name}' does not expose inputs/outputs")
 		
 		return metadata.inputs[0].name, metadata.outputs[0].name
 
 	def run(self, batch_input: np.ndarray) -> np.ndarray:
-		tritonclient, client = self.load_triton_client()
-
-		if not client.is_server_ready():
-			raise RuntimeError(f"Triton server is not ready at {self.host}")
-		if not client.is_model_ready(self.model_name, self.model_version):
-			raise RuntimeError(f"Model '{self.model_name}' is not ready on Triton server")
-
-		inferred_input_name, inferred_output_name = self.get_model_tensors(client, self.model_name, self.model_version)
+		inferred_input_name, inferred_output_name = self.get_model_tensors()
 
 		if batch_input is None:
 			raise ValueError("batch_input is required for inference")
 
 		image_tensor = batch_input
-		infer_input = tritonclient.InferInput(inferred_input_name, image_tensor.shape, "FP32")
+		infer_input = self.tritonclient.InferInput(inferred_input_name, image_tensor.shape, "FP32")
 		infer_input.set_data_from_numpy(image_tensor)
 
-		requested_output = tritonclient.InferRequestedOutput(inferred_output_name)
-		response = client.infer(self.model_name, inputs=[infer_input], outputs=[requested_output], model_version=self.model_version)
+		requested_output = self.tritonclient.InferRequestedOutput(inferred_output_name)
+		response = self.client.infer(self.model_name, inputs=[infer_input], outputs=[requested_output], model_version=self.model_version)
 		raw_output = response.as_numpy(inferred_output_name)
 
 		if raw_output is None:

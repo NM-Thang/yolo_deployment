@@ -1,6 +1,8 @@
 import argparse
 import cv2
 import numpy as np
+from tqdm import tqdm
+import time
 
 from utils.inference_io import preprocess_batch
 from utils.postprocessing import postprocess_yolo
@@ -9,23 +11,41 @@ from triton_client import TritonClient
 from sort import Sort
 
 class VideoBatchTracker:
-    def __init__(self, video_path, batch_size=8):
-        self.video_path = video_path
-        self.batch_size = batch_size
-        self.triton_client = TritonClient()
+    def __init__(self):
+        args = parse_args()
+        self.video_path = args.video_path
+        self.batch_size = args.batch_size
+        self.output_path = args.output_path + self.video_path.split("/")[-1] if args.output_path else ""
 
+        self.triton_client = TritonClient()
 
         self.tracker = Sort(max_age=5, min_hits=3, iou_threshold=0.3)
 
     def run(self):
         cap = cv2.VideoCapture(self.video_path)
+
+        start = time.time()
+        while not self.triton_client.check_server_and_model():
+            if time.time() - start > 10:
+                print("Triton not ready after 10 seconds, stop.")
+                return
+            print("Waiting for Triton server to be ready...")
+            time.sleep(1)
+            
+
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        delay_ms = int(1000 / fps) if fps > 0 else 30
+
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        pbar = tqdm(total=total_frames, desc="Processing Video", unit="frame")  
         
         orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         orig_size = (orig_w, orig_h) 
         
         frames_buffer = []
-        trakkers = []
+        frames_results = []
+
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -35,8 +55,11 @@ class VideoBatchTracker:
                 
             if len(frames_buffer) == self.batch_size or (not ret and len(frames_buffer) > 0):
                 
+                t0 = time.perf_counter()
                 batch_input = preprocess_batch(frames_buffer) 
+                t1 = time.perf_counter() - t0
                 batch_outputs = self.triton_client.run(batch_input=batch_input)
+                t2 = time.perf_counter() - t1
                 
                 input_size = (batch_input.shape[3], batch_input.shape[2])  # (W, H) for postprocessing
                 for i in range(len(frames_buffer)):
@@ -68,32 +91,44 @@ class VideoBatchTracker:
                         cv2.rectangle(current_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                         cv2.putText(current_frame, f"ID: {track_id}", (x1, y1 - 10), 
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                    
-                    cv2.imshow("Video Batch Tracking", current_frame)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        cap.release()
-                        cv2.destroyAllWindows()
-                        return
+                    frames_results.append(current_frame)
+                t3 = time.perf_counter() - t2
+                pbar.update(len(frames_buffer))
                 
                 frames_buffer = []
             
+                print(f"Preprocess: {t1:.3f}s, Inference: {t2:.3f}s, Postprocess+Track: {t3:.3f}s")
+
             if not ret:
                 break
-        cv2.destroyAllWindows()
+        
+        pbar.close()
+
+        # fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        # writer = cv2.VideoWriter(self.output_path, fourcc, fps if fps > 0 else 30, orig_size)
+        # if not writer.isOpened():
+        #     raise RuntimeError(f"Cannot open VideoWriter for {self.output_path}")
+        # for frame in frames_results:
+        #     writer.write(frame)
+        # writer.release()
+        # print(f"Saved video to: {self.output_path}")
+        
+        # for frame in frames_results:
+        #     cv2.imshow("Video Batch Tracking", frame)
+
+        #     if cv2.waitKey(delay_ms) & 0xFF == ord('q'):
+        #         break
+        # cv2.destroyAllWindows()
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Triton Batch Tracking Example")
     parser.add_argument("--video-path", type=str, default="data/videos/people-detection.mp4", help="Path to input video")
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size for inference")
+    parser.add_argument("--output-path", type=str, default="data/videos/results/", help="Path to save output video (optional)")
 
     args = parser.parse_known_args()[0]
     return args
 
 if __name__ == "__main__":
-    args = parse_args()
-
-    tracker_app = VideoBatchTracker(
-        video_path=args.video_path,
-        batch_size=args.batch_size
-    )
+    tracker_app = VideoBatchTracker()
     tracker_app.run()
