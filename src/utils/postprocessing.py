@@ -7,7 +7,6 @@ import torch
 from ultralytics.utils.nms import non_max_suppression
 from ultralytics.utils.ops import scale_boxes
 
-
 DEFAULT_COCO_CLASSES = (
 	"person",
 	"bicycle",
@@ -91,14 +90,12 @@ DEFAULT_COCO_CLASSES = (
 	"toothbrush",
 )
 
-
 @dataclass(frozen=True)
 class Detection:
 	class_id: int
 	class_name: str
 	score: float
 	box: tuple[float, float, float, float]
-
 
 def _normalize_output(output: np.ndarray) -> np.ndarray:
 	output = np.asarray(output)

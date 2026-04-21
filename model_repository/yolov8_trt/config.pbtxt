@@ -6,7 +6,7 @@ version_policy: { all: {} } # 1 - FP32, 2 - FP16
 
 dynamic_batching {
   preferred_batch_size: [ 4, 8, 16, 32 ]
-  max_queue_delay_microseconds: 500
+  max_queue_delay_microseconds: 10000
 }
 
 input [

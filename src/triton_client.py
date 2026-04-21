@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-from http import client
 import importlib
 import numpy as np
 
@@ -14,6 +13,8 @@ class TritonClient:
 		self.model_version = args.model_version
 
 		self.tritonclient, self.client = self.load_triton_client()
+		self.inferred_input_name , self.inferred_output_name = self.get_model_tensors()
+
 
 	def load_triton_client(self):
 		if self.protocol == "grpc":
@@ -44,21 +45,23 @@ class TritonClient:
 		return metadata.inputs[0].name, metadata.outputs[0].name
 
 	def run(self, batch_input: np.ndarray) -> np.ndarray:
-		inferred_input_name, inferred_output_name = self.get_model_tensors()
 
 		if batch_input is None:
 			raise ValueError("batch_input is required for inference")
+		
+		if batch_input.ndim == 3:
+			batch_input = np.expand_dims(batch_input, axis=0)
 
 		image_tensor = batch_input
-		infer_input = self.tritonclient.InferInput(inferred_input_name, image_tensor.shape, "FP32")
+		infer_input = self.tritonclient.InferInput(self.inferred_input_name, image_tensor.shape, "FP32")
 		infer_input.set_data_from_numpy(image_tensor)
 
-		requested_output = self.tritonclient.InferRequestedOutput(inferred_output_name)
+		requested_output = self.tritonclient.InferRequestedOutput(self.inferred_output_name)
 		response = self.client.infer(self.model_name, inputs=[infer_input], outputs=[requested_output], model_version=self.model_version)
-		raw_output = response.as_numpy(inferred_output_name)
+		raw_output = response.as_numpy(self.inferred_output_name)
 
 		if raw_output is None:
-			raise RuntimeError(f"Model '{self.model_name}' returned no output named '{inferred_output_name}'")
+			raise RuntimeError(f"Model '{self.model_name}' returned no output named '{self.inferred_output_name}'")
 		
 		return raw_output
 	
