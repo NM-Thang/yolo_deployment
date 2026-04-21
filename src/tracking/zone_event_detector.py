@@ -6,6 +6,8 @@ import cv2
 import asyncio
 from collections import deque 
 import time
+from shapely.geometry import Polygon
+
 
 class Zone:
     def __init__(self, name: str = "", coordinates: list[tuple[int, int]] = None):
@@ -30,14 +32,20 @@ class Zone:
         cv2.fillPoly(self.mask, [np.array(self.coordinates)], 1)
 
     def contains_point(self, w1: int, h1: int, w2: int, h2: int) -> bool:
-        h1c = max(0, h1)
-        w1c = max(0, w1)
-        h2c = min(self.mask.shape[0], h2)
-        w2c = min(self.mask.shape[1], w2)
-        if h1c >= h2c or w1c >= w2c:
-            return False
-        region = self.mask[h1c:h2c, w1c:w2c]
-        return np.any(region)
+        # h1c = max(0, h1)
+        # w1c = max(0, w1)
+        # h2c = min(self.mask.shape[0], h2)
+        # w2c = min(self.mask.shape[1], w2)
+        # if h1c >= h2c or w1c >= w2c:
+        #     return False
+        # region = self.mask[h1c:h2c, w1c:w2c]
+        # return np.any(region)
+        polygon_zone = Polygon(self.coordinates)
+        polygon_object = Polygon([(w1, h1), (w2, h1), (w2, h2), (w1, h2)])
+        return polygon_zone.intersects(polygon_object)
+
+
+
        
 class ZoneEventDetector:
     def __init__(self, zone: Zone, target_class: str = "person", detector_adapter: DetectorAdapter = None, semaphore_limit: int = 32):
@@ -58,10 +66,6 @@ class ZoneEventDetector:
         
         return self._process_tracking_and_zones({"detections": detections, "frame_id": 0})
             
-    def handle_event(self, results: dict) -> None:
-        event = results["event"]
-        for e in event:
-            print(e)
             
 
     async def push_frame_async(self, frm: np.ndarray, fid: int):
@@ -97,13 +101,18 @@ class ZoneEventDetector:
         if len(dets) == 0:
             dets = np.empty((0, 5), dtype=np.float32)
             
-
+        t0 = time.perf_counter()
         tracked_objects = self.tracker.update(dets)
+        t1 = time.perf_counter()
+        print(f"Tracking time for frame {t1 - t0:.4f} seconds")
         event = []
 
         for obj in tracked_objects:
             x1, y1, x2, y2, track_id = obj.astype(int)
+            t0 = time.perf_counter()
             is_in_zone = self.zone.contains_point(x1, y1, x2, y2)
+            t1 = time.perf_counter()
+            print(f"Zone check time for: {t1 - t0:.4f} seconds")
 
             if is_in_zone and track_id not in self.objects_in_zone:
                 self.objects_in_zone.add(track_id)

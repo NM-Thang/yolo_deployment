@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from utils.inference_io import preprocess_batch
 from utils. image_processing import  preprocess_image_single
 from utils.postprocessing import postprocess_yolo, Detection
+import time
 
 
 
@@ -21,8 +22,7 @@ class DetectorAdapter:
 
         input = preprocess_image_single(image)
         ouput = self.triton_client.run(batch_input=input)
-
-
+        t2 = time.perf_counter()
         detections = postprocess_yolo(
             raw_output=ouput[0],
             input_size=(input.shape[2], input.shape[1]),
@@ -37,7 +37,7 @@ class DetectorAdapter:
         
         input = preprocess_image_single(frm)
         ouput = await self.triton_client.async_run(batch_input=input)
-        
+
         detections = postprocess_yolo(
             raw_output=ouput[0],
             input_size=(input.shape[2], input.shape[1]),
@@ -45,8 +45,7 @@ class DetectorAdapter:
             confidence_threshold=0.5,
             iou_threshold=0.45,
             top_k=20,
-        )        
-
+        )                
         return {"detections": detections, "frame_id": fid}
         
 
