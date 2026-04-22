@@ -1,6 +1,5 @@
 from pathlib import Path
 import numpy as np
-from utils.image_processing import preprocess_image_single
 
 SUPPORTED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp"}
 
@@ -22,9 +21,6 @@ def collect_image_paths(image_path: Path, image_dir: Path | None = None) -> list
     return [image_path]
 
 
-def preprocess_batch(sources: list[Path] | list[np.ndarray], input_size: tuple[int, int] = (320, 640)) -> np.ndarray:
-    tensors = [preprocess_image_single(sources, input_size=input_size) for sources in sources]
-    return np.stack(tensors, axis=0).astype(np.float32, copy=False)
 
 
 def resolve_path(path_str: str | None, project_root: Path) -> Path | None:

@@ -1,0 +1,141 @@
+from tmp.tracking.zone_event_detector import Zone, ZoneEventDetector
+from utils.detector_adapter import DetectorAdapter
+from utils.triton_client import TritonClient
+import cv2
+import argparse
+import asyncio
+import queue
+import concurrent.futures
+import time
+import numpy as np
+
+
+class VideoPipeline:
+    def __init__(self, zone_event_detector: ZoneEventDetector, args) -> None:
+        self.ZoneEventDetector = zone_event_detector
+        self.args = args
+        self.frame_queue = queue.Queue(maxsize=60)
+        self.result_queue = queue.Queue(maxsize=200)
+        self.is_running = False
+        cap = cv2.VideoCapture(self.args.video_path)
+        self.fps = cap.get(cv2.CAP_PROP_FPS)
+        self.delay_ms = int(1000 / self.fps) if self.fps > 0 else 30
+
+    def reader_thread(self) -> None:
+        """Reads frames from the camera and pushes them to the frame queue (I/O Bound)."""
+        cap = cv2.VideoCapture(self.args.video_path)
+        self.fps = cap.get(cv2.CAP_PROP_FPS)
+        self.delay_ms = int(1000 / self.fps) if self.fps > 0 else 30
+        while self.is_running:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_data = {"image": frame, "fid": int(
+                cap.get(cv2.CAP_PROP_POS_FRAMES))}
+            if not self.frame_queue.full():
+                self.frame_queue.put(frame_data)
+        cap.release()
+
+    def worker_thread(self) -> None:
+        """Handles Preprocess -> Triton Request -> Postprocess (Mixed Bound)."""
+        while self.is_running:
+            try:
+                frame_data = self.frame_queue.get()
+                frame = frame_data["image"]
+                fid = frame_data["fid"]
+                result_data = self.ZoneEventDetector.process_frame(frame)
+                event = result_data["event"]
+                tracked_objects = result_data["tracked_objects"]
+
+                out = draw_frame(frame, tracked_objects,
+                                 self.ZoneEventDetector.zone.coordinates)
+                if not self.result_queue.full():
+                    self.result_queue.put(
+                        {"frame": out, "event": event, "fid": fid})
+
+            except queue.Empty:
+                continue
+            except Exception as e:
+                print(f"Error in worker thread: {e}")
+
+    def restreamer_thread(self) -> None:
+        """Consumes results from the result queue and displays them (I/O Bound)."""
+        while self.is_running:
+
+            while self.result_queue.qsize() < int(self.fps):
+                time.sleep(0.01)
+            try:
+                result_data = self.result_queue.get()
+                frame, event, fid = result_data["frame"], result_data["event"], result_data["fid"]
+
+                for e in event:
+                    print(e)
+
+                cv2.imshow("Zone Event Detector Demo", frame)
+                if cv2.waitKey(self.delay_ms) & 0xFF == ord('q'):
+                    self.is_running = False
+                    break
+
+            except queue.Empty:
+                continue
+
+
+def demo_multithread() -> None:
+    """Consumes results from the result queue and displays them (I/O Bound)."""
+    args = parse_args()
+    triton_client = TritonClient()
+    adapter = DetectorAdapter(triton_client)
+    zone = Zone(name="Entrance", coordinates=[
+                (250, 150), (450, 150), (450, 350), (250, 350)])
+    zone_event_detector = ZoneEventDetector(
+        zone=zone, detector_adapter=adapter, semaphore_limit=2)
+
+    pipeline = VideoPipeline(zone_event_detector, args)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        pipeline.is_running = True
+        executor.submit(pipeline.reader_thread)
+        executor.submit(pipeline.worker_thread)
+
+        try:
+            while pipeline.is_running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pipeline.is_running = False
+    pipeline.restreamer_thread()
+
+
+def draw_frame(frame: np.ndarray, tracked_objects: list, corner_points: list) -> None:
+    for obj in tracked_objects:
+        x1, y1, x2, y2, track_id = obj.astype(int)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(frame, f"ID: {track_id}", (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+    for i in (0, len(corner_points)-2, 1):
+        cv2.line(frame, corner_points[i], corner_points[i+1], (255, 0, 0), 2)
+    cv2.line(frame, corner_points[-1], corner_points[0], (255, 0, 0), 2)
+    return frame
+
+
+def display_frame(event: list[str], frame: np.ndarray, delay_ms: int) -> None:
+    for e in event:
+        print(e)
+    cv2.imshow("Zone Event Detector Demo", frame)
+    if cv2.waitKey(delay_ms) & 0xFF == ord('q'):
+        return
+
+
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Zone Event Detector Demo")
+    parser.add_argument("--video-path", type=str,
+                        default="data/videos/people-detection.mp4", help="Path to input video")
+    return parser.parse_known_args()[0]
+
+
+if __name__ == "__main__":
+    demo_multithread()
+    # asyncio.run(main())
+    # asyncio.run(main_v2())

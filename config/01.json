@@ -1,0 +1,11 @@
+{
+  "camera_id": "cam_front_door",
+  "active_strategies": {
+    "ai_code_001": {
+      "zone_coordinates": [[[0, 0], [10, 0], [10, 10], [0, 10]]]
+    },
+    "ai_code_002": {
+      "threshold": 0.45
+    }
+  }
+}
