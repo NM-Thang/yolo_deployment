@@ -10,7 +10,7 @@ from engine.vision_engine import AIEngine
 from utils.frame_handler import draw_bbox, draw_zone, display_frame
 
 
-def main():
+def demo():
 
     args = parse_args()
 
@@ -36,15 +36,15 @@ def main():
 
     # Get video properties
     fps = cap.get(cv2.CAP_PROP_FPS)
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     # Make video writer to save results
-    if not os.path.exists(args.out_dir):
-        os.makedirs(args.out_dir)
-    save_path = Path(args.out_dir) / f"{os.path.splitext(os.path.basename(args.video_path))[0]}_pl{len(os.listdir(args.out_dir))+1}.mp4"
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(str(save_path), fourcc, fps, (width, height)) if args.save_video else None
+    # if not os.path.exists(args.out_dir):
+    #     os.makedirs(args.out_dir)
+    # save_path = Path(args.out_dir) / f"{os.path.splitext(os.path.basename(args.video_path))[0]}_pl{len(os.listdir(args.out_dir))+1}.mp4"
+    # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # out = cv2.VideoWriter(str(save_path), fourcc, fps, (width, height)) if args.save_video else None
 
     frame_count = 0
     while cap.isOpened():
@@ -69,14 +69,21 @@ def main():
             if code == "intrusion":
                 frame = draw_zone(frame, result.get("corner_points", []))
         
-        end_time = time.time()
-        delay_ms = max(10, int(1000 / fps) - int((end_time - start_time) * 1000))
+        # end_time = time.time()
+        # delay_ms = max(10, int(1000 / fps) - int((end_time - start_time) * 1000))
         # display_frame(event, frame, delay_ms)
         for e in event:
             print(e)
         
-        if args.save_video and out is not None:
-            out.write(frame)
+        # if args.save_video and out is not None:
+        #     out.write(frame)
+
+        _ret, buffer = cv2.imencode('.jpg', frame)
+        if not _ret:
+            print(f"Failed to encode frame {frame_count}.")
+            continue
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n' )
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -92,4 +99,4 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    main()
+    demo()

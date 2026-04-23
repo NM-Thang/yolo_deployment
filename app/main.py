@@ -1,19 +1,30 @@
-import requests
-import cv2
-import numpy as np
+import subprocess
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
+from src.main import demo
 
-IMG_SOURCE_URL = "http://server-khac/anh.jpg"  # Thay bằng URL thực tế
 
-def fetch_and_show():
-    resp = requests.get(IMG_SOURCE_URL)
-    img_arr = np.frombuffer(resp.content, np.uint8)
-    img = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
-    if img is not None:
-        cv2.imshow("Received Image", img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    else:
-        print("Không nhận được ảnh hợp lệ.")
+app = FastAPI()
+
+# Dictionary to keep track of active FFmpeg processes by stream_id
+active_streams = {}
+
+# Data models for request validation
+class RestreamRequest(BaseModel):
+    stream_id: str
+    source_url: str
+    destination_urls: list[str]
+
+class StopRequest(BaseModel):
+    stream_id: str
+
+@app.get("/video")
+def video_feed():
+    return StreamingResponse(demo(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+
 
 if __name__ == "__main__":
-    fetch_and_show()
+    uvicorn.run(app, host="0.0.0.0", port=8080)
