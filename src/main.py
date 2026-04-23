@@ -72,18 +72,20 @@ def demo():
         # end_time = time.time()
         # delay_ms = max(10, int(1000 / fps) - int((end_time - start_time) * 1000))
         # display_frame(event, frame, delay_ms)
-        for e in event:
-            print(e)
+        # for e in event:
+        #     print(e)
         
         # if args.save_video and out is not None:
         #     out.write(frame)
 
-        _ret, buffer = cv2.imencode('.jpg', frame)
-        if not _ret:
-            print(f"Failed to encode frame {frame_count}.")
-            continue
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n' )
+        # _ret, buffer = cv2.imencode('.jpg', frame)
+        # if not _ret:
+        #     print(f"Failed to encode frame {frame_count}.")
+        #     continue
+        # yield (b'--frame\r\n'
+        #        b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n' )
+
+        yield frame, event
 
 def parse_args():
     parser = argparse.ArgumentParser(
