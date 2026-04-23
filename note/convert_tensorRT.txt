@@ -14,8 +14,7 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --optShapes=<input_name>:8x3x640x640 \
 --maxShapes=<input_name>:32x3x640x640 \
 --workspace=4096 \
---iterations=100 \
---exportProfile=./tensorrt/x/file.json
+
 
 
 /usr/src/tensorrt/bin/trtexec \
@@ -25,8 +24,7 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --optShapes=input:8x3x640x640 \
 --maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=100 \
---exportProfile=exportProfile32.json
+
 
 /usr/src/tensorrt/bin/trtexec \
 --onnx=yolov8n_torch.onnx \
@@ -36,8 +34,6 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --optShapes=input:32x3x640x640 \
 --maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=100 \
---exportProfile=exportProfile16.json
 
 
 /usr/src/tensorrt/bin/trtexec \
@@ -48,8 +44,6 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --optShapes=input:32x3x384x640 \
 --maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=100 \
---exportProfile=exportProfile16v2.json
 
 /usr/src/tensorrt/bin/trtexec \
 --onnx=yolov8n_torch.onnx \
@@ -59,8 +53,7 @@ docker run --gpus '"device=x"' -it --rm --user $(id -u):$(id -g) -v $PWD:/worksp
 --optShapes=input:64x3x384x640 \
 --maxShapes=input:64x3x640x640 \
 --workspace=4096 \
---iterations=100 \
---exportProfile=exportProfile16v3.json
+
 
 
 

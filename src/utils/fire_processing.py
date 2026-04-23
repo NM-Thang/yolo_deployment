@@ -245,15 +245,14 @@ class Detector_Processing:
             conf_threshold: Confidence threshold for filtering detections
             
         Returns:
-            tuple: (filtered_bboxes, filtered_scores, filtered_labels)
-                - Lists of bounding boxes, confidence scores, and class labels
+            list: List of detection dictionaries with keys "bbox", "score", and "label"
         """
         # Transform raw model output
         data = transform_output(response, confidence_threshold=conf_threshold)
         
         # Handle empty detection case
         if data.size == 0 or data.shape[2] == 0:
-            return [], [], []
+            return []
             
         # Convert to torch tensor and apply post-processing
         data = torch.from_numpy(data).float()
@@ -262,18 +261,30 @@ class Detector_Processing:
             ratio=self.ratio, 
             dwdh=self.dwdh
         )
-
-        # Convert tensors to lists for easier handling
-        filtered_bboxes = [bbox for bbox in bboxes]
-        filtered_scores = [score for score in scores]
-        filtered_labels = [label for label in labels]
-
-        detections =[]
-        for i in range(len(filtered_bboxes)):
+        detections = []
+        for bbox, score, label in zip(bboxes, scores, labels):
+            x1, y1, x2, y2 = bbox.int().tolist()
+            confidence = score.item()
+            class_id = int(label.item())
+            class_name = "Fire" if class_id == 0 else "Smoke" if class_id == 1 else f"Class{class_id}"  
             detections.append({
-                "bbox": filtered_bboxes[i],
-                "score": filtered_scores[i],
-                "label": filtered_labels[i]
+                "bbox": (x1, y1, x2, y2),
+                "score": confidence,
+                "label": class_name
             })
+        return detections
+
+        # # Convert tensors to lists for easier handling
+        # filtered_bboxes = [bbox for bbox in bboxes]
+        # filtered_scores = [score for score in scores]
+        # filtered_labels = [label for label in labels]
+
+        # detections =[]
+        # for i in range(len(filtered_bboxes)):
+        #     detections.append({
+        #         "bbox": filtered_bboxes[i],
+        #         "score": filtered_scores[i],
+        #         "label": filtered_labels[i]
+        #     })
 
         return detections

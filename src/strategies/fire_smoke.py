@@ -3,7 +3,7 @@ import time
 from shapely.geometry import Polygon 
 from typing import Any, Dict
 
-from src.core.base_strategy import AIStrategy
+from core.base_strategy import AIStrategy
 from utils.detector_adapter import DetectorAdapter
 
 
@@ -16,9 +16,9 @@ class FireSmokeDetection(AIStrategy):
 
     def process_frame(self, frame):
 
-        detections = self.adapter.detect_fire_smoke(frame)
+        dets = self.adapter.detect_fire_smoke(frame)
         event =[]
 
-        return {"event": event, "detections": detections}
+        return {"event": event, "detections": dets}
     
-
+    # def is_moving

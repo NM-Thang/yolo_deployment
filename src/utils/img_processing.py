@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 
-from __future__ import annotations
+# from __future__ import annotations
 from dataclasses import dataclass
 
 import torch

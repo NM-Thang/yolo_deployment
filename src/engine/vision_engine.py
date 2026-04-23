@@ -1,9 +1,9 @@
 from typing import Any, Dict, List, Type
 
-from src.core.base_strategy import AIStrategy
+from core.base_strategy import AIStrategy
 
-from src.strategies.fire_smoke import FireSmokeDetection
-from src.strategies.intrusion import IntrusionDetection
+from strategies.fire_smoke import FireSmokeDetection
+from strategies.intrusion import IntrusionDetection
 from utils.detector_adapter import DetectorAdapter
 from utils.triton_client import TritonClient
 
@@ -12,12 +12,11 @@ class AIEngine:
 
     def __init__(self, ):
         # The Registry: Mapping string code to strategy classes        
-        self._registry = Dict[str, Type[AIStrategy]] = {
+        self._registry: Dict[str, Type[AIStrategy]] = {
             "fire_smoke": FireSmokeDetection,
             "intrusion": IntrusionDetection,
         }
-        self.active_strategies = Dict[str, AIStrategy]()
-
+        self.active_strategies: Dict[str, AIStrategy] = {}
         self.adapter = DetectorAdapter(TritonClient())
 
     def activate_by_type(self, strategies_config: dict) -> None:

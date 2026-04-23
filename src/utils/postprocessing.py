@@ -96,7 +96,7 @@ class Detection:
     class_id: int
     class_name: str
     score: float
-    box: tuple[float, float, float, float]
+    bbox: tuple[float, float, float, float]
 
 
 def _normalize_output(output: np.ndarray) -> np.ndarray:
@@ -155,7 +155,7 @@ def postprocess_yolo(
                 class_name=class_names[class_id] if class_id < len(
                     class_names) else str(class_id),
                 score=float(score),
-                box=(float(x1), float(y1), float(x2), float(y2)),
+                bbox=(float(x1), float(y1), float(x2), float(y2)),
             )
         )
     return results

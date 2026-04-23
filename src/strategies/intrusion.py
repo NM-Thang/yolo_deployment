@@ -3,7 +3,7 @@ import time
 from shapely.geometry import Polygon 
 from typing import Any, Dict
 
-from src.core.base_strategy import AIStrategy
+from core.base_strategy import AIStrategy
 from utils.detector_adapter import DetectorAdapter
 from utils.sort import Sort
 
@@ -21,7 +21,7 @@ class IntrusionDetection(AIStrategy):
         
         if detections:
             dets = np.array(
-                [[det.box[0], det.box[1], det.box[2], det.box[3], det.score]
+                [[det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score]
                     for det in detections if det.class_name == "person"],
                 dtype=np.float32,
             )
@@ -29,16 +29,17 @@ class IntrusionDetection(AIStrategy):
             dets = np.empty((0, 5), dtype=np.float32)
         if len(dets) == 0:
             dets = np.empty((0, 5), dtype=np.float32)
-            
+        
+        print(f"Detections for current frame: {dets}")  # Debug statement to check detections
         tracked_objects = self.tracker.update(dets)
         event = []
-        detections =[]
+        dets_results = []
+
 
         for obj in tracked_objects:
             x1, y1, x2, y2, track_id = obj.astype(int)
 
             bbox = (x1, y1, x2, y2)
-            detections.append({"bbox": bbox, "track_id": track_id})
 
             polygon_object = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
             is_in_zone = self.polygon_zone.intersects(polygon_object)
@@ -51,4 +52,4 @@ class IntrusionDetection(AIStrategy):
                 event.append(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {self.target_class} {track_id} left the zone.")
 
             
-        return {"event": event, "detections": tracked_objects, "corner_points": list(self.polygon_zone.exterior.coords)}
+        return {"event": event, "detections": dets_results, "corner_points": list(self.polygon_zone.exterior.coords)}
