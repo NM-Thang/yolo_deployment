@@ -52,7 +52,7 @@ def _dynamic_letterbox(
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(pad_value,) * 3)
 
 
-def img_preprocessing(image_path: str | Path | np.ndarray, input_size: tuple = (640, 640)) -> np.ndarray:
+def img_preprocessing(image_path: str | Path | np.ndarray, input_size: tuple = (320, 640)) -> np.ndarray:
     """Read and preprocess a single image for YOLOv8 (ONNX/Triton).
     Returns a tensor with shape (3, H, W).
     """
@@ -61,14 +61,15 @@ def img_preprocessing(image_path: str | Path | np.ndarray, input_size: tuple = (
         img = cv2.imread(img_path_str)
     else:
         img = image_path
-
     if img is None:
         raise ValueError(f"Cannot read image from {img_path_str}")
 
     min_size = int(min(input_size))
     max_size = int(max(input_size))
+
     img_dyn = _dynamic_letterbox(
         img, min_size=min_size, max_size=max_size, stride=32)
+
 
     img_rgb = cv2.cvtColor(img_dyn, cv2.COLOR_BGR2RGB)
     img_chw = img_rgb.transpose((2, 0, 1))

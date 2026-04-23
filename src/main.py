@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import os
 from pathlib import Path
-from tqdm import trange
+import time
 
 from engine.vision_engine import AIEngine
 from utils.frame_handler import draw_bbox, draw_zone, display_frame
@@ -48,7 +48,10 @@ def main():
 
     frame_count = 0
     while cap.isOpened():
+        start_time = time.time()
         ret, frame = cap.read()
+        print()
+        print("-------------------------------------------------")
         print(f"Processing frame {frame_count}...")  # Debug statement to track progress
         if not ret:
             print(f"End of video stream or cannot read the frame at frame {frame_count}.")
@@ -65,8 +68,10 @@ def main():
 
             if code == "intrusion":
                 frame = draw_zone(frame, result.get("corner_points", []))
-
-        display_frame(event, frame, int(1000 / fps))
+        
+        end_time = time.time()
+        delay_ms = max(10, int(1000 / fps) - int((end_time - start_time) * 1000))
+        # display_frame(event, frame, delay_ms)
         for e in event:
             print(e)
         
@@ -79,7 +84,7 @@ def parse_args():
     parser.add_argument("--config-mode", type=str,
                         default="config/01.json", help="Path to config file")
     parser.add_argument("--video-path", type=str,
-                        default="data/videos/people-detection.mp4", help="Path to input video")
+                        default="data/videos/posVideo5.874.avi", help="Path to input video")
     parser.add_argument("--save-video", action="store_true", help="Whether to save the output video")
     parser.add_argument("--out-dir", type=str, default="data/videos/results", help="Directory to save output videos")
 
